@@ -298,7 +298,7 @@ public class MapperService extends AbstractIndexComponent  {
         typeListeners.remove(listener);
     }
 
-    public DocumentMapper merge(String type, CompressedString mappingSource, boolean applyDefault) {
+    public DocumentMapper merge(String type, CompressedString mappingSource, boolean applyDefault, String source) {
         if (DEFAULT_MAPPING.equals(type)) {
             // verify we can parse it
             DocumentMapper mapper = documentParser.parseCompressed(type, mappingSource);
@@ -314,13 +314,13 @@ public class MapperService extends AbstractIndexComponent  {
             }
             return mapper;
         } else {
-            return merge(parse(type, mappingSource, applyDefault));
+            return merge(parse(type, mappingSource, applyDefault), source);
         }
     }
 
     // never expose this to the outside world, we need to reparse the doc mapper so we get fresh
     // instances of field mappers to properly remove existing doc mapper
-    private DocumentMapper merge(DocumentMapper mapper) {
+    private DocumentMapper merge(DocumentMapper mapper, String source) {
         synchronized (typeMutex) {
             if (mapper.type().length() == 0) {
                 throw new InvalidTypeNameException("mapping type name is empty");
@@ -344,11 +344,12 @@ public class MapperService extends AbstractIndexComponent  {
 
             if (oldMapper != null) {
                 DocumentMapper.MergeResult result = oldMapper.merge(mapper, mergeFlags().simulate(false));
+                // conflict can happen in this case, since by design, no locking is done when a new field is introduced
+                // on a node, instead the new mapping is sent to the master to be merged in, which might result in conflicts
+                // if 2 concurrent requests are done on 2 different nodes introducing 2 different types, if that is a concern
+                // then dynamic templates up to explicit schema should be used
                 if (result.hasConflicts()) {
-                    // TODO: What should we do???
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("merging mapping for type [{}] resulted in conflicts: [{}]", mapper.type(), Arrays.toString(result.conflicts()));
-                    }
+                    logger.warn("merging mapping (source={}) for type [{}] resulted in conflicts: [{}]", source, mapper.type(), Arrays.toString(result.conflicts()));
                 }
                 fieldDataService.onMappingUpdate();
                 return oldMapper;
@@ -474,7 +475,7 @@ public class MapperService extends AbstractIndexComponent  {
             if (mapper != null) {
                 return Tuple.tuple(mapper, Boolean.FALSE);
             }
-            merge(type, null, true);
+            merge(type, null, true, "auto_create");
             return Tuple.tuple(mappers.get(type), Boolean.TRUE);
         }
     }

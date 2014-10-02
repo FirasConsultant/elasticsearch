@@ -183,7 +183,7 @@ public class DefaultSourceMappingTests extends ElasticsearchSingleNodeTest {
                 .endObject().endObject().string();
 
         MapperService mapperService = createIndex("test").mapperService();
-        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true);
+        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true, "test");
 
         DocumentMapper mapper = mapperService.documentMapperWithAutoCreate("my_type").v1();
         assertThat(mapper.type(), equalTo("my_type"));
@@ -197,12 +197,12 @@ public class DefaultSourceMappingTests extends ElasticsearchSingleNodeTest {
                 .endObject().endObject().string();
 
         MapperService mapperService = createIndex("test").mapperService();
-        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true);
+        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true, "test");
 
         String mapping = XContentFactory.jsonBuilder().startObject().startObject("my_type")
                 .startObject("_source").field("enabled", true).endObject()
                 .endObject().endObject().string();
-        mapperService.merge("my_type", new CompressedString(mapping), true);
+        mapperService.merge("my_type", new CompressedString(mapping), true, "test");
 
         DocumentMapper mapper = mapperService.documentMapper("my_type");
         assertThat(mapper.type(), equalTo("my_type"));
@@ -216,12 +216,12 @@ public class DefaultSourceMappingTests extends ElasticsearchSingleNodeTest {
                 .endObject().endObject().string();
 
         MapperService mapperService = createIndex("test").mapperService();
-        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true);
+        mapperService.merge(MapperService.DEFAULT_MAPPING, new CompressedString(defaultMapping), true, "test");
 
         String mapping = XContentFactory.jsonBuilder().startObject().startObject("my_type")
                 .startObject("_source").array("includes", "custom_field_path.").endObject()
                 .endObject().endObject().string();
-        mapperService.merge("my_type", new CompressedString(mapping), true);
+        mapperService.merge("my_type", new CompressedString(mapping), true, "test");
         DocumentMapper mapper = mapperService.documentMapper("my_type");
         assertThat(mapper.type(), equalTo("my_type"));
         assertThat(mapper.sourceMapper().includes().length, equalTo(2));
@@ -231,7 +231,7 @@ public class DefaultSourceMappingTests extends ElasticsearchSingleNodeTest {
         mapping = XContentFactory.jsonBuilder().startObject().startObject("my_type")
                 .startObject("properties").startObject("text").field("type", "string").endObject().endObject()
                 .endObject().endObject().string();
-        mapperService.merge("my_type", new CompressedString(mapping), false);
+        mapperService.merge("my_type", new CompressedString(mapping), false, "test");
         mapper = mapperService.documentMapper("my_type");
         assertThat(mapper.type(), equalTo("my_type"));
         assertThat(mapper.sourceMapper().includes(), hasItemInArray("default_field_path."));

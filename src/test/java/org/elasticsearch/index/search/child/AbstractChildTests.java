@@ -45,7 +45,7 @@ public abstract class AbstractChildTests extends ElasticsearchSingleNodeLuceneTe
     static SearchContext createSearchContext(String indexName, String parentType, String childType) throws IOException {
         IndexService indexService = createIndex(indexName);
         MapperService mapperService = indexService.mapperService();
-        mapperService.merge(childType, new CompressedString(PutMappingRequest.buildFromSimplifiedDef(childType, "_parent", "type=" + parentType).string()), true);
+        mapperService.merge(childType, new CompressedString(PutMappingRequest.buildFromSimplifiedDef(childType, "_parent", "type=" + parentType).string()), true, "test");
         return createSearchContext(indexService);
     }
 

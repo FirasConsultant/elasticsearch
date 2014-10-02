@@ -410,7 +410,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
                     logger.debug("[{}] adding mapping [{}], source [{}]", index, mappingType, mappingSource.string());
                 }
                 // we don't apply default, since it has been applied when the mappings were parsed initially
-                mapperService.merge(mappingType, mappingSource, false);
+                mapperService.merge(mappingType, mappingSource, false, "merge_from_master_on_node");
                 if (!mapperService.documentMapper(mappingType).mappingSource().equals(mappingSource)) {
                     logger.debug("[{}] parsed mapping [{}], and got different sources\noriginal:\n{}\nparsed:\n{}", index, mappingType, mappingSource, mapperService.documentMapper(mappingType).mappingSource());
                     requiresRefresh = true;
@@ -423,7 +423,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent<Indic
                         logger.debug("[{}] updating mapping [{}], source [{}]", index, mappingType, mappingSource.string());
                     }
                     // we don't apply default, since it has been applied when the mappings were parsed initially
-                    mapperService.merge(mappingType, mappingSource, false);
+                    mapperService.merge(mappingType, mappingSource, false, "merge_from_master_on_node");
                     if (!mapperService.documentMapper(mappingType).mappingSource().equals(mappingSource)) {
                         requiresRefresh = true;
                         logger.debug("[{}] parsed mapping [{}], and got different sources\noriginal:\n{}\nparsed:\n{}", index, mappingType, mappingSource, mapperService.documentMapper(mappingType).mappingSource());

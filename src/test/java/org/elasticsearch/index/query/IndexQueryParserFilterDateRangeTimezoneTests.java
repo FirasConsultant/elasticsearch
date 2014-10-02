@@ -55,7 +55,7 @@ public class IndexQueryParserFilterDateRangeTimezoneTests extends ElasticsearchS
 
         MapperService mapperService = indexService.mapperService();
         String mapping = copyToStringFromClasspath("/org/elasticsearch/index/query/mapping.json");
-        mapperService.merge("person", new CompressedString(mapping), true);
+        mapperService.merge("person", new CompressedString(mapping), true, "test");
         mapperService.documentMapper("person").parse(new BytesArray(copyToBytesFromClasspath("/org/elasticsearch/index/query/data.json")));
         queryParser = injector.getInstance(IndexQueryParserService.class);
     }

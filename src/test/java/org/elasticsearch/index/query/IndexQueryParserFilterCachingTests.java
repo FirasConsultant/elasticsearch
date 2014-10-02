@@ -65,9 +65,9 @@ public class IndexQueryParserFilterCachingTests extends ElasticsearchSingleNodeT
 
         MapperService mapperService = indexService.mapperService();
         String mapping = copyToStringFromClasspath("/org/elasticsearch/index/query/mapping.json");
-        mapperService.merge("person", new CompressedString(mapping), true);
+        mapperService.merge("person", new CompressedString(mapping), true, "test");
         String childMapping = copyToStringFromClasspath("/org/elasticsearch/index/query/child-mapping.json");
-        mapperService.merge("child", new CompressedString(childMapping), true);
+        mapperService.merge("child", new CompressedString(childMapping), true, "test");
         mapperService.documentMapper("person").parse(new BytesArray(copyToBytesFromClasspath("/org/elasticsearch/index/query/data.json")));
         queryParser = injector.getInstance(IndexQueryParserService.class);
     }
