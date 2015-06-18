@@ -34,6 +34,7 @@ import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.support.Headers;
 import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.component.AbstractComponent;
 import org.elasticsearch.common.inject.Inject;
@@ -228,7 +229,9 @@ public class TransportClientNodesService extends AbstractComponent {
 
         @Override
         public void onFailure(Throwable e) {
-            if (ExceptionsHelper.unwrapCause(e) instanceof ConnectTransportException) {
+            Throwable unwrapCause = ExceptionsHelper.unwrapCause(e);
+            if (unwrapCause instanceof ConnectTransportException ||
+                    (unwrapCause instanceof ClusterBlockException && ((ClusterBlockException) unwrapCause).retryable())) {
                 int i = ++this.i;
                 if (i >= nodes.size()) {
                     listener.onFailure(new NoNodeAvailableException("None of the configured nodes were available: " + nodes, e));

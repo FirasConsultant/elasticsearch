@@ -161,7 +161,7 @@ public class TransportClientNodesServiceTests extends ElasticsearchTestCase {
                 }
 
                 assertThat(iteration.transport.triedNodes().size(), lessThanOrEqualTo(iteration.nodesCount));
-                assertThat(iteration.transport.triedNodes().size(), equalTo(iteration.transport.connectTransportExceptions() + iteration.transport.failures() + iteration.transport.successes()));
+                assertThat(iteration.transport.triedNodes().size(), equalTo(iteration.transport.retriedTransportExceptions() + iteration.transport.failures() + iteration.transport.successes()));
             }
         }
     }

@@ -20,14 +20,16 @@
 package org.elasticsearch.client.transport;
 
 import com.carrotsearch.randomizedtesting.generators.RandomInts;
-import org.elasticsearch.ElasticsearchException;
+import com.google.common.collect.ImmutableSet;
 import org.elasticsearch.action.admin.cluster.node.liveness.LivenessResponse;
 import org.elasticsearch.cluster.ClusterName;
+import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.component.Lifecycle;
 import org.elasticsearch.common.component.LifecycleListener;
 import org.elasticsearch.common.transport.BoundTransportAddress;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.gateway.GatewayService;
 import org.elasticsearch.transport.*;
 
 import java.io.IOException;
@@ -46,7 +48,7 @@ abstract class FailAndRetryMockTransport<Response extends TransportResponse> imp
 
     private TransportServiceAdapter transportServiceAdapter;
 
-    private final AtomicInteger connectTransportExceptions = new AtomicInteger();
+    private final AtomicInteger retriedTransportException = new AtomicInteger();
     private final AtomicInteger failures = new AtomicInteger();
     private final AtomicInteger successes = new AtomicInteger();
     private final Set<DiscoveryNode> triedNodes = new CopyOnWriteArraySet<>();
@@ -70,8 +72,12 @@ abstract class FailAndRetryMockTransport<Response extends TransportResponse> imp
         triedNodes.add(node);
 
         if (RandomInts.randomInt(random, 100) > 10) {
-            connectTransportExceptions.incrementAndGet();
-            throw new ConnectTransportException(node, "node not available");
+            retriedTransportException.incrementAndGet();
+            if (random.nextBoolean()) {
+                throw new ConnectTransportException(node, "node not available");
+            } else {
+                throw new ClusterBlockException(ImmutableSet.of(GatewayService.STATE_NOT_RECOVERED_BLOCK));
+            }
         } else {
             if (random.nextBoolean()) {
                 failures.incrementAndGet();
@@ -96,8 +102,8 @@ abstract class FailAndRetryMockTransport<Response extends TransportResponse> imp
         this.connectMode = false;
     }
 
-    public int connectTransportExceptions() {
-        return connectTransportExceptions.get();
+    public int retriedTransportExceptions() {
+        return retriedTransportException.get();
     }
 
     public int failures() {
