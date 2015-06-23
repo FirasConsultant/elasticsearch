@@ -26,6 +26,7 @@ import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.routing.MutableShardRouting;
 import org.elasticsearch.cluster.routing.RoutingNode;
 import org.elasticsearch.cluster.routing.RoutingNodes;
+import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.cluster.routing.ShardRoutingState;
 import org.elasticsearch.cluster.routing.allocation.FailedRerouteAllocation;
 import org.elasticsearch.cluster.routing.allocation.RoutingAllocation;
@@ -118,7 +119,7 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
     }
 
     @Override
-    public boolean move(MutableShardRouting shardRouting, RoutingNode node, RoutingAllocation allocation) {
+    public boolean move(ShardRouting.Mutable shardRouting, RoutingNode node, RoutingAllocation allocation) {
         final Balancer balancer = new Balancer(logger, allocation, weightFunction, threshold);
         return balancer.move(shardRouting, node);
     }
@@ -227,10 +228,10 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
         private final float threshold;
         private final MetaData metaData;
 
-        private final Predicate<MutableShardRouting> assignedFilter = new Predicate<MutableShardRouting>() {
+        private final Predicate<ShardRouting.Mutable> assignedFilter = new Predicate<ShardRouting.Mutable>() {
             @Override
-            public boolean apply(MutableShardRouting input) {
-                return input.assignedToNode();
+            public boolean apply(ShardRouting.Mutable input) {
+                return input.isAssignedToNode();
             }
         };
 
@@ -476,8 +477,8 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
          *
          * @return <code>true</code> iff the shard has successfully been moved.
          */
-        public boolean move(MutableShardRouting shard, RoutingNode node ) {
-            if (nodes.isEmpty() || !shard.started()) {
+        public boolean move(ShardRouting.Mutable shard, RoutingNode node ) {
+            if (nodes.isEmpty() || !shard.isStarted()) {
                 /* with no nodes or a not started shard this is pointless */
                 return false;
             }
@@ -890,7 +891,7 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
             return indices.values().iterator();
         }
 
-        public boolean containsShard(MutableShardRouting shard) {
+        public boolean containsShard(ShardRouting.Mutable shard) {
             ModelIndex index = getIndex(shard.getIndex());
             return index == null ? false : index.containsShard(shard);
         }
@@ -949,19 +950,19 @@ public class BalancedShardsAllocator extends AbstractComponent implements Shards
             return numPrimaries;
         }
 
-        public Decision removeShard(MutableShardRouting shard) {
+        public Decision removeShard(ShardRouting.Mutable shard) {
             highestPrimary = numPrimaries = -1;
             return shards.remove(shard);
         }
 
-        public void addShard(MutableShardRouting shard, Decision decision) {
+        public void addShard(ShardRouting.Mutable shard, Decision decision) {
             highestPrimary = numPrimaries = -1;
             assert decision != null;
             assert !shards.containsKey(shard) : "Shard already allocated on current node: " + shards.get(shard) + " " + shard;
             shards.put(shard, decision);
         }
 
-        public boolean containsShard(MutableShardRouting shard) {
+        public boolean containsShard(ShardRouting.Mutable shard) {
             return shards.containsKey(shard);
         }
     }

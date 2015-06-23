@@ -53,9 +53,9 @@ public class RoutingNodes implements Iterable<RoutingNode> {
 
     private final UnassignedShards unassignedShards = new UnassignedShards();
 
-    private final List<MutableShardRouting> ignoredUnassignedShards = newArrayList();
+    private final List<ShardRouting.Mutable> ignoredUnassignedShards = newArrayList();
 
-    private final Map<ShardId, List<MutableShardRouting>> assignedShards = newHashMap();
+    private final Map<ShardId, List<ShardRouting.Mutable>> assignedShards = newHashMap();
 
     private final ImmutableOpenMap<String, ClusterState.Custom> customs;
 
@@ -75,10 +75,10 @@ public class RoutingNodes implements Iterable<RoutingNode> {
         this.routingTable = clusterState.routingTable();
         this.customs = clusterState.customs();
 
-        Map<String, List<MutableShardRouting>> nodesToShards = newHashMap();
+        Map<String, List<ShardRouting.Mutable>> nodesToShards = newHashMap();
         // fill in the nodeToShards with the "live" nodes
         for (ObjectCursor<DiscoveryNode> cursor : clusterState.nodes().dataNodes().values()) {
-            nodesToShards.put(cursor.value.id(), new ArrayList<MutableShardRouting>());
+            nodesToShards.put(cursor.value.id(), new ArrayList<ShardRouting.Mutable>());
         }
 
         // fill in the inverse of node -> shards allocated
@@ -90,11 +90,11 @@ public class RoutingNodes implements Iterable<RoutingNode> {
                     // we define a replica set and keep track of it. A replica set is identified
                     // by the ShardId, as this is common for primary and replicas.
                     // A replica Set might have one (and not more) replicas with the state of RELOCATING.
-                    if (shard.assignedToNode()) {
-                        List<MutableShardRouting> entries = nodesToShards.get(shard.currentNodeId());
+                    if (shard.isAssignedToNode()) {
+                        List<ShardRouting.Mutable> entries = nodesToShards.get(shard.getCurrentNodeId());
                         if (entries == null) {
                             entries = newArrayList();
-                            nodesToShards.put(shard.currentNodeId(), entries);
+                            nodesToShards.put(shard.getCurrentNodeId(), entries);
                         }
                         MutableShardRouting sr = new MutableShardRouting(shard);
                         entries.add(sr);
@@ -304,7 +304,7 @@ public class RoutingNodes implements Iterable<RoutingNode> {
         return true;
     }
 
-    public List<MutableShardRouting> shards(Predicate<MutableShardRouting> predicate) {
+    public List<MutableShardRouting> shards(Predicate<ShardRouting.Mutable> predicate) {
         List<MutableShardRouting> shards = newArrayList();
         for (RoutingNode routingNode : this) {
             for (MutableShardRouting shardRouting : routingNode) {

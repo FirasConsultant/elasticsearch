@@ -33,30 +33,30 @@ import static com.google.common.collect.Lists.newArrayList;
  * A {@link RoutingNode} represents a cluster node associated with a single {@link DiscoveryNode} including all shards
  * that are hosted on that nodes. Each {@link RoutingNode} has a unique node id that can be used to identify the node.
  */
-public class RoutingNode implements Iterable<MutableShardRouting> {
+public class RoutingNode implements Iterable<ShardRouting.Mutable> {
 
     private final String nodeId;
 
     private final DiscoveryNode node;
 
-    private final List<MutableShardRouting> shards;
+    private final List<ShardRouting.Mutable> shards;
 
     public RoutingNode(String nodeId, DiscoveryNode node) {
-        this(nodeId, node, new ArrayList<MutableShardRouting>());
+        this(nodeId, node, new ArrayList<ShardRouting.Mutable>());
     }
 
-    public RoutingNode(String nodeId, DiscoveryNode node, List<MutableShardRouting> shards) {
+    public RoutingNode(String nodeId, DiscoveryNode node, List<ShardRouting.Mutable> shards) {
         this.nodeId = nodeId;
         this.node = node;
         this.shards = shards;
     }
 
     @Override
-    public Iterator<MutableShardRouting> iterator() {
+    public Iterator<ShardRouting.Mutable> iterator() {
         return Iterators.unmodifiableIterator(shards.iterator());
     }
 
-    Iterator<MutableShardRouting> mutableIterator() {
+    Iterator<ShardRouting.Mutable> mutableIterator() {
         return shards.iterator();
     }
 
@@ -85,11 +85,11 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
      * Add a new shard to this node
      * @param shard Shard to crate on this Node
      */
-    void add(MutableShardRouting shard) {
+    void add(ShardRouting.Mutable shard) {
         // TODO use Set with ShardIds for faster lookup.
-        for (MutableShardRouting shardRouting : shards) {
-            if (shardRouting.shardId().equals(shard.shardId())) {
-                throw new IllegalStateException("Trying to add a shard [" + shard.shardId().index().name() + "][" + shard.shardId().id() + "] to a node [" + nodeId + "] where it already exists");
+        for (ShardRouting.Mutable shardRouting : shards) {
+            if (shardRouting.getShardId().equals(shard.getShardId())) {
+                throw new IllegalStateException("Trying to add a shard [" + shard.getShardId().index().name() + "][" + shard.getShardId().id() + "] to a node [" + nodeId + "] where it already exists");
             }
         }
         shards.add(shard);
@@ -102,9 +102,9 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
      */
     public int numberOfShardsWithState(ShardRoutingState... states) {
         int count = 0;
-        for (MutableShardRouting shardEntry : this) {
+        for (ShardRouting.Mutable shardEntry : this) {
             for (ShardRoutingState state : states) {
-                if (shardEntry.state() == state) {
+                if (shardEntry.getState() == state) {
                     count++;
                 }
             }
@@ -117,11 +117,11 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
      * @param states set of states which should be listed
      * @return List of shards 
      */
-    public List<MutableShardRouting> shardsWithState(ShardRoutingState... states) {
-        List<MutableShardRouting> shards = newArrayList();
-        for (MutableShardRouting shardEntry : this) {
+    public List<ShardRouting.Mutable> shardsWithState(ShardRoutingState... states) {
+        List<ShardRouting.Mutable> shards = newArrayList();
+        for (ShardRouting.Mutable shardEntry : this) {
             for (ShardRoutingState state : states) {
-                if (shardEntry.state() == state) {
+                if (shardEntry.getState() == state) {
                     shards.add(shardEntry);
                 }
             }
@@ -135,15 +135,15 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
      * @param states set of states which should be listed
      * @return a list of shards
      */
-    public List<MutableShardRouting> shardsWithState(String index, ShardRoutingState... states) {
-        List<MutableShardRouting> shards = newArrayList();
+    public List<ShardRouting.Mutable> shardsWithState(String index, ShardRoutingState... states) {
+        List<ShardRouting.Mutable> shards = newArrayList();
 
-        for (MutableShardRouting shardEntry : this) {
-            if (!shardEntry.index().equals(index)) {
+        for (ShardRouting.Mutable shardEntry : this) {
+            if (!shardEntry.getIndex().equals(index)) {
                 continue;
             }
             for (ShardRoutingState state : states) {
-                if (shardEntry.state() == state) {
+                if (shardEntry.getState() == state) {
                     shards.add(shardEntry);
                 }
             }
@@ -156,8 +156,8 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
      */
     public int numberOfOwningShards() {
         int count = 0;
-        for (MutableShardRouting shardEntry : this) {
-            if (shardEntry.state() != ShardRoutingState.RELOCATING) {
+        for (ShardRouting shardEntry : this) {
+            if (shardEntry.getState() != ShardRoutingState.RELOCATING) {
                 count++;
             }
         }
@@ -168,7 +168,7 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
     public String prettyPrint() {
         StringBuilder sb = new StringBuilder();
         sb.append("-----node_id[").append(nodeId).append("][" + (node == null ? "X" : "V") + "]\n");
-        for (MutableShardRouting entry : shards) {
+        for (ShardRouting entry : shards) {
             sb.append("--------").append(entry.shortSummary()).append('\n');
         }
         return sb.toString();
@@ -190,11 +190,11 @@ public class RoutingNode implements Iterable<MutableShardRouting> {
         return sb.toString();
     }
 
-    public MutableShardRouting get(int i) {
+    public ShardRouting.Mutable get(int i) {
         return shards.get(i) ;
     }
 
-    public Collection<MutableShardRouting> copyShards() {
+    public Collection<ShardRouting.Mutable> copyShards() {
         return new ArrayList<>(shards);
     }
 
