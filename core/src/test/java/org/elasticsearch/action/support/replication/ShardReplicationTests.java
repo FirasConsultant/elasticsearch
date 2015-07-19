@@ -24,7 +24,6 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.UnavailableShardsException;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.support.ActionFilter;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.PlainActionFuture;
@@ -43,6 +42,7 @@ import org.elasticsearch.cluster.metadata.MetaData;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.*;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -324,7 +324,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
     }
 
     @Test
-    public void testWriteConsistency() throws ExecutionException, InterruptedException {
+    public void testWriteActivityLevel() throws ExecutionException, InterruptedException {
         action = new ActionWithConsistency(Settings.EMPTY, "testActionWithConsistency", transportService, clusterService, threadPool);
         final String index = "test";
         final ShardId shardId = new ShardId(index, 0);
@@ -332,8 +332,8 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
         final int unassignedReplicas = randomInt(2);
         final int totalShards = 1 + assignedReplicas + unassignedReplicas;
         final boolean passesWriteConsistency;
-        Request request = new Request(shardId).consistencyLevel(randomFrom(WriteConsistencyLevel.values()));
-        switch (request.consistencyLevel()) {
+        Request request = new Request(shardId).activityLevel(randomFrom(ActivityLevel.values()));
+        switch (request.activityLevel()) {
             case ONE:
                 passesWriteConsistency = true;
                 break;
@@ -345,11 +345,18 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
                     passesWriteConsistency = assignedReplicas + 1 >= (totalShards / 2) + 1;
                 }
                 break;
+            case ALL_MINUS_1:
+                if (totalShards <= 1) {
+                    passesWriteConsistency = unassignedReplicas == 0;
+                } else {
+                    passesWriteConsistency = assignedReplicas + 1 >= (totalShards - 1);
+                }
+                break;
             case ALL:
                 passesWriteConsistency = unassignedReplicas == 0;
                 break;
             default:
-                throw new RuntimeException("unknown consistency level [" + request.consistencyLevel() + "]");
+                throw new RuntimeException("unknown consistency level [" + request.activityLevel() + "]");
         }
         ShardRoutingState[] replicaStates = new ShardRoutingState[assignedReplicas + unassignedReplicas];
         for (int i = 0; i < assignedReplicas; i++) {
@@ -361,7 +368,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
 
         clusterService.setState(state(index, true, ShardRoutingState.STARTED, replicaStates));
         logger.debug("using consistency level of [{}], assigned shards [{}], total shards [{}]. expecting op to [{}]. using state: \n{}",
-                request.consistencyLevel(), 1 + assignedReplicas, 1 + assignedReplicas + unassignedReplicas, passesWriteConsistency ? "succeed" : "retry",
+                request.activityLevel(), 1 + assignedReplicas, 1 + assignedReplicas + unassignedReplicas, passesWriteConsistency ? "succeed" : "retry",
                 clusterService.state().prettyPrint());
 
         final IndexShardRoutingTable shardRoutingTable = clusterService.state().routingTable().index(index).shard(shardId.id());
@@ -369,7 +376,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
 
         TransportReplicationAction<Request, Request, Response>.PrimaryPhase primaryPhase = action.new PrimaryPhase(request, listener);
         if (passesWriteConsistency) {
-            assertThat(primaryPhase.checkWriteConsistency(shardRoutingTable.primaryShard()), nullValue());
+            assertThat(primaryPhase.checkActivityLevel(shardRoutingTable.primaryShard()), nullValue());
             primaryPhase.run();
             assertTrue("operations should have been perform, consistency level is met", request.processedOnPrimary.get());
             if (assignedReplicas > 0) {
@@ -378,7 +385,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
                 assertIndexShardCounter(1);
             }
         } else {
-            assertThat(primaryPhase.checkWriteConsistency(shardRoutingTable.primaryShard()), notNullValue());
+            assertThat(primaryPhase.checkActivityLevel(shardRoutingTable.primaryShard()), notNullValue());
             primaryPhase.run();
             assertFalse("operations should not have been perform, consistency level is *NOT* met", request.processedOnPrimary.get());
             assertIndexShardUninitialized();
@@ -720,7 +727,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
         }
 
         @Override
-        protected boolean checkWriteConsistency() {
+        protected boolean checkActivityLevel() {
             return false;
         }
 
@@ -742,7 +749,7 @@ public class ShardReplicationTests extends ElasticsearchTestCase {
         }
 
         @Override
-        protected boolean checkWriteConsistency() {
+        protected boolean checkActivityLevel() {
             return true;
         }
     }

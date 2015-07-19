@@ -94,14 +94,14 @@ redirected into the primary shard within that id group, and replicated
 (if needed) to shard replicas within that id group.
 
 [float]
-[[delete-consistency]]
-=== Write Consistency
+[[delete-activity-level]]
+=== Activity Level
 
 Control if the operation will be allowed to execute based on the number
 of active shards within that partition (replication group). The values
 allowed are `one`, `quorum`, and `all`. The parameter to set it is
-`consistency`, and it defaults to the node level setting of
-`action.write_consistency` which in turn defaults to `quorum`.
+`activity_level`, and it defaults to the node level setting of
+`action.write_activity_level` which in turn defaults to `quorum`.
 
 For example, in a N shards with 2 replicas index, there will have to be
 at least 2 active shards within the relevant partition (`quorum`) for

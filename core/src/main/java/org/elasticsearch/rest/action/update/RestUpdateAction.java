@@ -20,11 +20,11 @@
 package org.elasticsearch.rest.action.update;
 
 import org.elasticsearch.action.ActionWriteResponse;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.update.UpdateRequest;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -67,10 +67,7 @@ public class RestUpdateAction extends BaseRestHandler {
         updateRequest.parent(request.param("parent"));
         updateRequest.timeout(request.paramAsTime("timeout", updateRequest.timeout()));
         updateRequest.refresh(request.paramAsBoolean("refresh", updateRequest.refresh()));
-        String consistencyLevel = request.param("consistency");
-        if (consistencyLevel != null) {
-            updateRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
-        }
+        updateRequest.activityLevel(ActivityLevel.fromString(request.param("activity_level", request.param("consistency")), updateRequest.activityLevel()));
         updateRequest.docAsUpsert(request.paramAsBoolean("doc_as_upsert", updateRequest.docAsUpsert()));
         ScriptParameterParser scriptParameterParser = new ScriptParameterParser();
         scriptParameterParser.parseParams(request);

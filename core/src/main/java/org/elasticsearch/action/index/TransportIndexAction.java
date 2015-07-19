@@ -138,7 +138,7 @@ public class TransportIndexAction extends TransportReplicationAction<IndexReques
     }
 
     @Override
-    protected boolean checkWriteConsistency() {
+    protected boolean checkActivityLevel() {
         return true;
     }
 

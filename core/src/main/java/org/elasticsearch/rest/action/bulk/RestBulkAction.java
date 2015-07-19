@@ -21,7 +21,6 @@ package org.elasticsearch.rest.action.bulk;
 
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.ActionWriteResponse;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkItemResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -31,6 +30,7 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -79,10 +79,7 @@ public class RestBulkAction extends BaseRestHandler {
         String fieldsParam = request.param("fields");
         String[] defaultFields = fieldsParam != null ? Strings.commaDelimitedListToStringArray(fieldsParam) : null;
 
-        String consistencyLevel = request.param("consistency");
-        if (consistencyLevel != null) {
-            bulkRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
-        }
+        bulkRequest.activityLevel(ActivityLevel.fromString(request.param("activity_level", request.param("consistency")), bulkRequest.activityLevel()));
         bulkRequest.timeout(request.paramAsTime("timeout", BulkShardRequest.DEFAULT_TIMEOUT));
         bulkRequest.refresh(request.paramAsBoolean("refresh", bulkRequest.refresh()));
         bulkRequest.add(request.content(), defaultIndex, defaultType, defaultRouting, defaultFields, null, allowExplicitIndex);

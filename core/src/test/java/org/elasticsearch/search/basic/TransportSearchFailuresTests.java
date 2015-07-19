@@ -21,7 +21,6 @@ package org.elasticsearch.search.basic;
 
 import com.google.common.base.Charsets;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
 import org.elasticsearch.action.admin.indices.refresh.RefreshResponse;
@@ -29,6 +28,7 @@ import org.elasticsearch.action.search.SearchPhaseExecutionException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.test.ElasticsearchIntegrationTest;
@@ -110,7 +110,7 @@ public class TransportSearchFailuresTests extends ElasticsearchIntegrationTest {
     }
 
     private void index(Client client, String id, String nameValue, int age) throws IOException {
-        client.index(Requests.indexRequest("test").type("type1").id(id).source(source(id, nameValue, age)).consistencyLevel(WriteConsistencyLevel.ONE)).actionGet();
+        client.index(Requests.indexRequest("test").type("type1").id(id).source(source(id, nameValue, age)).activityLevel(ActivityLevel.ONE)).actionGet();
     }
 
     private XContentBuilder source(String id, String nameValue, int age) throws IOException {

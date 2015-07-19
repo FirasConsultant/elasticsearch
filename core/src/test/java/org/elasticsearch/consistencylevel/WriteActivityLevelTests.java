@@ -20,9 +20,9 @@
 package org.elasticsearch.consistencylevel;
 
 import org.elasticsearch.action.UnavailableShardsException;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.RestStatus;
@@ -36,7 +36,7 @@ import static org.hamcrest.Matchers.equalTo;
 /**
  *
  */
-public class WriteConsistencyLevelTests extends ElasticsearchIntegrationTest {
+public class WriteActivityLevelTests extends ElasticsearchIntegrationTest {
 
 
     @Test
@@ -49,15 +49,15 @@ public class WriteConsistencyLevelTests extends ElasticsearchIntegrationTest {
         assertThat(clusterHealth.getStatus(), equalTo(ClusterHealthStatus.YELLOW));
 
         // indexing, by default, will work (ONE consistency level)
-        client().prepareIndex("test", "type1", "1").setSource(source("1", "test")).setConsistencyLevel(WriteConsistencyLevel.ONE).execute().actionGet();
+        client().prepareIndex("test", "type1", "1").setSource(source("1", "test")).setActivityLevel(ActivityLevel.ONE).execute().actionGet();
         try {
             client().prepareIndex("test", "type1", "1").setSource(source("1", "test"))
-                    .setConsistencyLevel(WriteConsistencyLevel.QUORUM)
+                    .setActivityLevel(ActivityLevel.QUORUM)
                     .setTimeout(timeValueMillis(100)).execute().actionGet();
             fail("can't index, does not match consistency");
         } catch (UnavailableShardsException e) {
             assertThat(e.status(), equalTo(RestStatus.SERVICE_UNAVAILABLE));
-            assertThat(e.getMessage(), equalTo("[test][0] Not enough active copies to meet write consistency of [QUORUM] (have 1, needed 2). Timeout: [100ms], request: index {[test][type1][1], source[{ type1 : { \"id\" : \"1\", \"name\" : \"test\" } }]}"));
+            assertThat(e.getMessage(), equalTo("[test][0] Not enough active copies to meet activity level of [QUORUM] (have 1, total 3). Timeout: [100ms], request: index {[test][type1][1], source[{ type1 : { \"id\" : \"1\", \"name\" : \"test\" } }]}"));
             // but really, all is well
         }
 
@@ -70,17 +70,17 @@ public class WriteConsistencyLevelTests extends ElasticsearchIntegrationTest {
 
         // this should work, since we now have 
         client().prepareIndex("test", "type1", "1").setSource(source("1", "test"))
-                .setConsistencyLevel(WriteConsistencyLevel.QUORUM)
+                .setActivityLevel(ActivityLevel.QUORUM)
                 .setTimeout(timeValueSeconds(1)).execute().actionGet();
 
         try {
             client().prepareIndex("test", "type1", "1").setSource(source("1", "test"))
-                    .setConsistencyLevel(WriteConsistencyLevel.ALL)
+                    .setActivityLevel(ActivityLevel.ALL)
                     .setTimeout(timeValueMillis(100)).execute().actionGet();
             fail("can't index, does not match consistency");
         } catch (UnavailableShardsException e) {
             assertThat(e.status(), equalTo(RestStatus.SERVICE_UNAVAILABLE));
-            assertThat(e.getMessage(), equalTo("[test][0] Not enough active copies to meet write consistency of [ALL] (have 2, needed 3). Timeout: [100ms], request: index {[test][type1][1], source[{ type1 : { \"id\" : \"1\", \"name\" : \"test\" } }]}"));
+            assertThat(e.getMessage(), equalTo("[test][0] Not enough active copies to meet activity level of [ALL] (have 2, total 3). Timeout: [100ms], request: index {[test][type1][1], source[{ type1 : { \"id\" : \"1\", \"name\" : \"test\" } }]}"));
             // but really, all is well
         }
 
@@ -92,7 +92,7 @@ public class WriteConsistencyLevelTests extends ElasticsearchIntegrationTest {
 
         // this should work, since we now have
         client().prepareIndex("test", "type1", "1").setSource(source("1", "test"))
-                .setConsistencyLevel(WriteConsistencyLevel.ALL)
+                .setActivityLevel(ActivityLevel.ALL)
                 .setTimeout(timeValueSeconds(1)).execute().actionGet();
     }
 

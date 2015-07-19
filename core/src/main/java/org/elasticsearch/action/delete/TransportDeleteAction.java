@@ -121,7 +121,7 @@ public class TransportDeleteAction extends TransportReplicationAction<DeleteRequ
     }
 
     @Override
-    protected boolean checkWriteConsistency() {
+    protected boolean checkActivityLevel() {
         return true;
     }
 

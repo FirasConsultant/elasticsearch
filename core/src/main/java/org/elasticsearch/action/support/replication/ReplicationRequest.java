@@ -22,8 +22,8 @@ package org.elasticsearch.action.support.replication;
 import org.elasticsearch.action.ActionRequest;
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.IndicesRequest;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.support.IndicesOptions;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.unit.TimeValue;
@@ -47,7 +47,7 @@ public abstract class ReplicationRequest<T extends ReplicationRequest> extends A
     protected String index;
 
     private boolean threadedOperation = true;
-    private WriteConsistencyLevel consistencyLevel = WriteConsistencyLevel.DEFAULT;
+    private ActivityLevel activityLevel = ActivityLevel.DEFAULT;
     private volatile boolean canHaveDuplicates = false;
 
     protected ReplicationRequest() {
@@ -77,7 +77,7 @@ public abstract class ReplicationRequest<T extends ReplicationRequest> extends A
         this.timeout = request.timeout();
         this.index = request.index();
         this.threadedOperation = request.operationThreaded();
-        this.consistencyLevel = request.consistencyLevel();
+        this.activityLevel = request.activityLevel();
     }
 
     void setCanHaveDuplicates() {
@@ -148,16 +148,16 @@ public abstract class ReplicationRequest<T extends ReplicationRequest> extends A
         return IndicesOptions.strictSingleIndexNoExpandForbidClosed();
     }
 
-    public WriteConsistencyLevel consistencyLevel() {
-        return this.consistencyLevel;
+    public ActivityLevel activityLevel() {
+        return this.activityLevel;
     }
 
     /**
-     * Sets the consistency level of write. Defaults to {@link org.elasticsearch.action.WriteConsistencyLevel#DEFAULT}
+     * Sets the activity level of write.
      */
     @SuppressWarnings("unchecked")
-    public final T consistencyLevel(WriteConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+    public final T activityLevel(ActivityLevel activityLevel) {
+        this.activityLevel = activityLevel;
         return (T) this;
     }
 
@@ -176,7 +176,7 @@ public abstract class ReplicationRequest<T extends ReplicationRequest> extends A
         if (in.readBoolean()) {
             internalShardId = ShardId.readShardId(in);
         }
-        consistencyLevel = WriteConsistencyLevel.fromId(in.readByte());
+        activityLevel = ActivityLevel.readFrom(in);
         timeout = TimeValue.readTimeValue(in);
         index = in.readString();
         canHaveDuplicates = in.readBoolean();
@@ -187,7 +187,7 @@ public abstract class ReplicationRequest<T extends ReplicationRequest> extends A
     public void writeTo(StreamOutput out) throws IOException {
         super.writeTo(out);
         out.writeOptionalStreamable(internalShardId);
-        out.writeByte(consistencyLevel.id());
+        activityLevel.writeTo(out);
         timeout.writeTo(out);
         out.writeString(index);
         out.writeBoolean(canHaveDuplicates);

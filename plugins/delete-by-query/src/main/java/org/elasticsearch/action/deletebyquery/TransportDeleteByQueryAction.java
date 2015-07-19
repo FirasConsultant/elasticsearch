@@ -173,6 +173,7 @@ public class TransportDeleteByQueryAction extends HandledTransportAction<DeleteB
 
                         // Delete the scrolled documents using the Bulk API
                         BulkRequest bulkRequest = new BulkRequest();
+                        bulkRequest.activityLevel(request.activityLevel());
                         for (SearchHit doc : docs) {
                             DeleteRequest delete = new DeleteRequest(doc.index(), doc.type(), doc.id()).version(doc.version());
                             SearchHitField routing = doc.field("_routing");

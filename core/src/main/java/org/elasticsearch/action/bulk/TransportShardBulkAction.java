@@ -89,7 +89,7 @@ public class TransportShardBulkAction extends TransportReplicationAction<BulkSha
     }
 
     @Override
-    protected boolean checkWriteConsistency() {
+    protected boolean checkActivityLevel() {
         return true;
     }
 

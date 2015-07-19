@@ -20,10 +20,10 @@
 package org.elasticsearch.rest.action.delete;
 
 import org.elasticsearch.action.ActionWriteResponse;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -59,11 +59,7 @@ public class RestDeleteAction extends BaseRestHandler {
         deleteRequest.refresh(request.paramAsBoolean("refresh", deleteRequest.refresh()));
         deleteRequest.version(RestActions.parseVersion(request));
         deleteRequest.versionType(VersionType.fromString(request.param("version_type"), deleteRequest.versionType()));
-
-        String consistencyLevel = request.param("consistency");
-        if (consistencyLevel != null) {
-            deleteRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
-        }
+        deleteRequest.activityLevel(ActivityLevel.fromString(request.param("activity_level", request.param("consistency")), deleteRequest.activityLevel()));
 
         client.delete(deleteRequest, new RestBuilderListener<DeleteResponse>(channel) {
             @Override

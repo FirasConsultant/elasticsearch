@@ -24,6 +24,7 @@ import org.elasticsearch.action.ListenableActionFuture;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.QuerySourceBuilder;
 import org.elasticsearch.client.ElasticsearchClient;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -161,6 +162,11 @@ public class DeleteByQueryRequestBuilder extends ActionRequestBuilder<DeleteByQu
      */
     public DeleteByQueryRequestBuilder setTypes(String... types) {
         request.types(types);
+        return this;
+    }
+
+    public DeleteByQueryRequestBuilder setActivityLevel(ActivityLevel activityLevel) {
+        request.activityLevel(activityLevel);
         return this;
     }
 

@@ -24,7 +24,6 @@ import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionWriteResponse;
 import org.elasticsearch.action.UnavailableShardsException;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.bulk.BulkShardRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexRequest.OpType;
@@ -43,6 +42,7 @@ import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.routing.*;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -81,13 +81,13 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
     protected final ClusterService clusterService;
     protected final IndicesService indicesService;
     protected final ShardStateAction shardStateAction;
-    protected final WriteConsistencyLevel defaultWriteConsistencyLevel;
+    protected final ActivityLevel defaultActivityLevel;
     protected final TransportRequestOptions transportOptions;
     protected final MappingUpdatedAction mappingUpdatedAction;
 
     final String transportReplicaAction;
     final String executor;
-    final boolean checkWriteConsistency;
+    final boolean checkActivityLevel;
 
     protected TransportReplicationAction(Settings settings, String actionName, TransportService transportService,
                                          ClusterService clusterService, IndicesService indicesService,
@@ -104,7 +104,7 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
 
         this.transportReplicaAction = actionName + "[r]";
         this.executor = executor;
-        this.checkWriteConsistency = checkWriteConsistency();
+        this.checkActivityLevel = checkActivityLevel();
 
         transportService.registerRequestHandler(actionName, request, ThreadPool.Names.SAME, new OperationTransportHandler());
         // we must never reject on because of thread pool capacity on replicas
@@ -112,7 +112,7 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
 
         this.transportOptions = transportOptions();
 
-        this.defaultWriteConsistencyLevel = WriteConsistencyLevel.fromString(settings.get("action.write_consistency", "quorum"));
+        this.defaultActivityLevel = ActivityLevel.fromString(settings.get("action.write_activity_level", settings.get("action.write_consistency", "quorum")));
     }
 
     @Override
@@ -132,7 +132,7 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
 
     protected abstract ShardIterator shards(ClusterState clusterState, InternalRequest request);
 
-    protected abstract boolean checkWriteConsistency();
+    protected abstract boolean checkActivityLevel();
 
     protected ClusterBlockException checkGlobalBlock(ClusterState state) {
         return state.blocks().globalBlockedException(ClusterBlockLevel.WRITE);
@@ -574,9 +574,9 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
          * perform the operation on the node holding the primary
          */
         void performOnPrimary(final ShardRouting primary, final ShardIterator shardsIt) {
-            final String writeConsistencyFailure = checkWriteConsistency(primary);
-            if (writeConsistencyFailure != null) {
-                retryBecauseUnavailable(primary.shardId(), writeConsistencyFailure);
+            final String activityLevelFailure = checkActivityLevel(primary);
+            if (activityLevelFailure != null) {
+                retryBecauseUnavailable(primary.shardId(), activityLevelFailure);
                 return;
             }
             final ReplicationPhase replicationPhase;
@@ -616,50 +616,40 @@ public abstract class TransportReplicationAction<Request extends ReplicationRequ
         }
 
         /**
-         * checks whether we can perform a write based on the write consistency setting
+         * checks whether we can perform a write based on the activity level setting
          * returns **null* if OK to proceed, or a string describing the reason to stop
          */
-        String checkWriteConsistency(ShardRouting shard) {
-            if (checkWriteConsistency == false) {
+        String checkActivityLevel(ShardRouting shard) {
+            if (checkActivityLevel == false) {
                 return null;
             }
 
-            final WriteConsistencyLevel consistencyLevel;
-            if (internalRequest.request().consistencyLevel() != WriteConsistencyLevel.DEFAULT) {
-                consistencyLevel = internalRequest.request().consistencyLevel();
+            final ActivityLevel activityLevel;
+            if (internalRequest.request().activityLevel() != ActivityLevel.DEFAULT) {
+                activityLevel = internalRequest.request().activityLevel();
             } else {
-                consistencyLevel = defaultWriteConsistencyLevel;
+                activityLevel = defaultActivityLevel;
             }
-            final int sizeActive;
-            final int requiredNumber;
             IndexRoutingTable indexRoutingTable = observer.observedState().getRoutingTable().index(shard.index());
             if (indexRoutingTable != null) {
                 IndexShardRoutingTable shardRoutingTable = indexRoutingTable.shard(shard.getId());
                 if (shardRoutingTable != null) {
-                    sizeActive = shardRoutingTable.activeShards().size();
-                    if (consistencyLevel == WriteConsistencyLevel.QUORUM && shardRoutingTable.getSize() > 2) {
-                        // only for more than 2 in the number of shardIt it makes sense, otherwise its 1 shard with 1 replica, quorum is 1 (which is what it is initialized to)
-                        requiredNumber = (shardRoutingTable.getSize() / 2) + 1;
-                    } else if (consistencyLevel == WriteConsistencyLevel.ALL) {
-                        requiredNumber = shardRoutingTable.getSize();
+                    int totalCopies = shardRoutingTable.getSize();
+                    int sizeActive = shardRoutingTable.activeShards().size();
+                    if (activityLevel.isMet(totalCopies, sizeActive)) {
+                        return null;
                     } else {
-                        requiredNumber = 1;
+                        logger.trace("not enough active copies of shard [{}] to meet activity level of [{}] (have {}, needed {}), scheduling a retry.",
+                                shard.shardId(), activityLevel, sizeActive, totalCopies);
+                        return "Not enough active copies to meet activity level of [" + activityLevel + "] (have " + sizeActive + ", total " + totalCopies + ").";
                     }
                 } else {
-                    sizeActive = 0;
-                    requiredNumber = 1;
+                    logger.trace("failed to find shard routing table for {}", shard);
+                    return "failed to find shard routing table for " + shard;
                 }
             } else {
-                sizeActive = 0;
-                requiredNumber = 1;
-            }
-
-            if (sizeActive < requiredNumber) {
-                logger.trace("not enough active copies of shard [{}] to meet write consistency of [{}] (have {}, needed {}), scheduling a retry.",
-                        shard.shardId(), consistencyLevel, sizeActive, requiredNumber);
-                return "Not enough active copies to meet write consistency of [" + consistencyLevel + "] (have " + sizeActive + ", needed " + requiredNumber + ").";
-            } else {
-                return null;
+                logger.trace("failed to find index routing table for {}", shard);
+                return "failed to find index routing table for " + shard;
             }
         }
 

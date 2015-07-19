@@ -26,6 +26,7 @@ import org.elasticsearch.action.IndicesRequest;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.QuerySourceBuilder;
 import org.elasticsearch.client.Requests;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -76,16 +77,12 @@ public class DeleteByQueryRequest extends ActionRequest<DeleteByQueryRequest> im
     private IndicesOptions indicesOptions = IndicesOptions.fromOptions(false, false, true, false);
 
     private String[] types = Strings.EMPTY_ARRAY;
-
     private BytesReference source;
-
     private String routing;
-
     private int size = 0;
-
     private Scroll scroll = new Scroll(TimeValue.timeValueMinutes(10));
-
     private TimeValue timeout;
+    private ActivityLevel activityLevel = ActivityLevel.DEFAULT;
 
     public DeleteByQueryRequest() {
     }
@@ -243,11 +240,21 @@ public class DeleteByQueryRequest extends ActionRequest<DeleteByQueryRequest> im
         return this;
     }
 
+    public ActivityLevel activityLevel() {
+        return this.activityLevel;
+    }
+
+    public DeleteByQueryRequest activityLevel(ActivityLevel activityLevel) {
+        this.activityLevel = activityLevel;
+        return this;
+    }
+
     @Override
     public void readFrom(StreamInput in) throws IOException {
         super.readFrom(in);
         indices = in.readStringArray();
         indicesOptions = IndicesOptions.readIndicesOptions(in);
+        activityLevel = ActivityLevel.readFrom(in);
         types = in.readStringArray();
         source = in.readBytesReference();
         routing = in.readOptionalString();
@@ -265,6 +272,7 @@ public class DeleteByQueryRequest extends ActionRequest<DeleteByQueryRequest> im
         super.writeTo(out);
         out.writeStringArray(indices);
         indicesOptions.writeIndicesOptions(out);
+        activityLevel.writeTo(out);
         out.writeStringArray(types);
         out.writeBytesReference(source);
         out.writeOptionalString(routing);

@@ -308,7 +308,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             final ShardId shardId = entry.getKey();
             final List<BulkItemRequest> requests = entry.getValue();
             BulkShardRequest bulkShardRequest = new BulkShardRequest(bulkRequest, shardId.index().name(), shardId.id(), bulkRequest.refresh(), requests.toArray(new BulkItemRequest[requests.size()]));
-            bulkShardRequest.consistencyLevel(bulkRequest.consistencyLevel());
+            bulkShardRequest.activityLevel(bulkRequest.activityLevel());
             bulkShardRequest.timeout(bulkRequest.timeout());
             shardBulkAction.execute(bulkShardRequest, new ActionListener<BulkShardResponse>() {
                 @Override

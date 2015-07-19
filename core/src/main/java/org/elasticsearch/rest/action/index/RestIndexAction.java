@@ -20,10 +20,10 @@
 package org.elasticsearch.rest.action.index;
 
 import org.elasticsearch.action.ActionWriteResponse;
-import org.elasticsearch.action.WriteConsistencyLevel;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -96,10 +96,8 @@ public class RestIndexAction extends BaseRestHandler {
                 }
             }
         }
-        String consistencyLevel = request.param("consistency");
-        if (consistencyLevel != null) {
-            indexRequest.consistencyLevel(WriteConsistencyLevel.fromString(consistencyLevel));
-        }
+        indexRequest.activityLevel(ActivityLevel.fromString(request.param("activity_level", request.param("consistency")), indexRequest.activityLevel()));
+
         client.index(indexRequest, new RestBuilderListener<IndexResponse>(channel) {
             @Override
             public RestResponse buildResponse(IndexResponse response, XContentBuilder builder) throws Exception {

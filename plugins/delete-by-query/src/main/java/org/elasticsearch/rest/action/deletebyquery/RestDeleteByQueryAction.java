@@ -24,6 +24,7 @@ import org.elasticsearch.action.deletebyquery.DeleteByQueryResponse;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.QuerySourceBuilder;
 import org.elasticsearch.client.Client;
+import org.elasticsearch.common.ActivityLevel;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
@@ -54,6 +55,7 @@ public class RestDeleteByQueryAction extends BaseRestHandler {
         DeleteByQueryRequest delete = new DeleteByQueryRequest(Strings.splitStringByCommaToArray(request.param("index")));
         delete.indicesOptions(IndicesOptions.fromRequest(request, delete.indicesOptions()));
         delete.routing(request.param("routing"));
+        delete.activityLevel(ActivityLevel.fromString(request.param("activity_level", request.param("consistency")), delete.activityLevel()));
         if (request.hasParam("timeout")) {
             delete.timeout(request.paramAsTime("timeout", null));
         }

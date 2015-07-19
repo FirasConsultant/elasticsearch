@@ -144,13 +144,13 @@ It automatically follows the behavior of the index operation based on
 the `_ttl` mapping.
 
 [float]
-[[bulk-consistency]]
-=== Write Consistency
+[[bulk-activity-level]]
+=== Activity Level
 
 When making bulk calls, you can require a minimum number of active
-shards in the partition through the `consistency` parameter. The values
+shards in the partition through the `activity_level` parameter. The values
 allowed are `one`, `quorum`, and `all`. It defaults to the node level
-setting of `action.write_consistency`, which in turn defaults to
+setting of `action.write_activity_level`, which in turn defaults to
 `quorum`.
 
 For example, in a N shards with 2 replicas index, there will have to be

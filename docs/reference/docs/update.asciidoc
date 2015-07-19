@@ -230,9 +230,9 @@ Can't be used to update the `parent` of an existing document.
 
 Timeout waiting for a shard to become available.
 
-`consistency`::
+`activity_level`::
 
-The write consistency of the index/delete operation.
+The activity level of the resulting index/delete operation.
 
 `refresh`::
 
